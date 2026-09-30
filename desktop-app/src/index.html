@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Secret Manager</title>
+  <style>
+    :root {
+      --bg-primary: #0f0f1a;
+      --bg-secondary: #1a1a2e;
+      --bg-tertiary: #16213e;
+      --text-primary: #e0e0e0;
+      --text-secondary: #a0a0b0;
+      --accent: #4fc3f7;
+      --accent-hover: #29b6f6;
+      --danger: #ef5350;
+      --success: #66bb6a;
+      --border: #2a2a4a;
+      --radius: 8px;
+      --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .screen { display: none; height: 100vh; flex-direction: column; }
+    .screen.active { display: flex; }
+
+    /* Lock Screen */
+    #lock-screen {
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f0f1a 0%, #16213e 100%);
+    }
+
+    .lock-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 48px;
+      width: 400px;
+      max-width: 90vw;
+      box-shadow: var(--shadow);
+    }
+
+    .lock-card h1 {
+      text-align: center;
+      margin-bottom: 8px;
+      font-size: 24px;
+      color: var(--accent);
+    }
+
+    .lock-card .subtitle {
+      text-align: center;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      font-size: 14px;
+    }
+
+    .input-group { margin-bottom: 20px; }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-group input:focus { border-color: var(--accent); }
+    .input-group input::placeholder { color: #555; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0f0f1a;
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { background: #d32f2f; }
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+    .btn-secondary:hover { border-color: var(--text-secondary); }
+
+    .btn-sm { padding: 8px 16px; font-size: 13px; width: auto; }
+
+    .error-msg {
+      color: var(--danger);
+      font-size: 13px;
+      margin-top: 8px;
+      display: none;
+    }
+
+    /* Main App */
+    #app-screen {
+      background: var(--bg-primary);
+    }
+
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .app-header h2 { font-size: 18px; color: var(--accent); }
+
+    .header-actions { display: flex; gap: 8px; }
+
+    .app-content {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sidebar-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius);
+      color: var(--text-secondary);
+      font-size: 14px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s;
+    }
+
+    .sidebar-btn:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+    .sidebar-btn.active { background: var(--bg-tertiary); color: var(--accent); }
+    .sidebar-btn .icon { font-size: 18px; width: 24px; text-align: center; }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .search-box {
+      flex: 1;
+      padding: 10px 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      font-size: 14px;
+      outline: none;
+    }
+
+    .search-box:focus { border-color: var(--accent); }
+
+    .record-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    .record-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .record-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .record-card .record-id {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .record-card .record-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .record-card .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    /* Status bar */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 24px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .status-dot.unlocked { background: var(--success); }
+    .status-dot.locked { background: var(--danger); }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-overlay.active { display: flex; }
+
+    .modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      width: 420px;
+      max-width: 90vw;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal h3 {
+      margin-bottom: 20px;
+      font-size: 18px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .modal-actions .btn { flex: 1; }
+
+    /* Toast */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 20px;
+      font-size: 14px;
+      box-shadow: var(--shadow);
+      animation: slideIn 0.3s ease;
+      max-width: 400px;
+    }
+
+    .toast.error { border-color: var(--danger); color: var(--danger); }
+    .toast.success { border-color: var(--success); color: var(--success); }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <!-- Lock Screen -->
+  <div id="lock-screen" class="screen active">
+    <div class="lock-card">
+      <h1>🔐 Secret Manager</h1>
+      <p class="subtitle">Your privacy-first password vault</p>
+
+      <div id="create-form">
+        <div class="input-group">
+          <label for="create-password">Master Password</label>
+          <input type="password" id="create-password" placeholder="Choose a strong password" autocomplete="new-password" />
+        </div>
+        <div class="input-group">
+          <label for="create-confirm">Confirm Password</label>
+          <input type="password" id="create-confirm" placeholder="Re-enter your password" autocomplete="new-password" />
+        </div>
+        <button class="btn btn-primary" onclick="doCreate()">Create Vault</button>
+        <p class="error-msg" id="create-error"></p>
+        <p style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-secondary)">
+          Already have a vault? <a href="#" onclick="showUnlockForm()" style="color:var(--accent)">Unlock it</a>
+        </p>
+      </div>
+
+      <div id="unlock-form" class="hidden">
+        <div class="input-group">
+          <label for="unlock-password">Master Password</label>
+          <input type="password" id="unlock-password" placeholder="Enter your master password" autocomplete="current-password" />
+        </div>
+        <button class="btn btn-primary" onclick="doUnlock()">Unlock Vault</button>
+        <p class="error-msg" id="unlock-error"></p>
+        <p style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-secondary)">
+          No vault yet? <a href="#" onclick="showCreateForm()" style="color:var(--accent)">Create one</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app-screen" class="screen">
+    <div class="app-header">
+      <h2>🔐 Secret Manager</h2>
+      <div class="header-actions">
+        <button class="btn btn-secondary btn-sm" onclick="lockVault()">Lock</button>
+      </div>
+    </div>
+
+    <div class="app-content">
+      <div class="sidebar">
+        <button class="sidebar-btn active" onclick="showView('secrets')">
+          <span class="icon">🗂️</span> Secrets
+        </button>
+        <button class="sidebar-btn" onclick="showView('generator')">
+          <span class="icon">🎲</span> Generator
+        </button>
+        <button class="sidebar-btn" onclick="showView('settings')">
+          <span class="icon">⚙️</span> Settings
+        </button>
+      </div>
+
+      <div class="main-content">
+        <!-- Secrets View -->
+        <div id="view-secrets">
+          <div class="toolbar">
+            <input type="text" class="search-box" id="search-box" placeholder="Search secrets..." oninput="filterRecords()" />
+            <button class="btn btn-primary btn-sm" onclick="showAddModal()">+ Add Secret</button>
+            <button class="btn btn-secondary btn-sm" onclick="exportVault()">Export</button>
+          </div>
+          <div class="record-grid" id="record-grid">
+            <!-- Records rendered here -->
+          </div>
+        </div>
+
+        <!-- Generator View -->
+        <div id="view-generator" class="hidden">
+          <h3 style="margin-bottom:20px">Password Generator</h3>
+          <div class="input-group">
+            <label>Length: <span id="gen-length-val">24</span></label>
+            <input type="range" min="4" max="64" value="24" id="gen-length"
+                   oninput="document.getElementById('gen-length-val').textContent=this.value" style="width:100%" />
+          </div>
+          <div class="input-group">
+            <label>
+              <input type="checkbox" id="gen-symbols" checked style="margin-right:8px" />
+              Include symbols
+            </label>
+          </div>
+          <button class="btn btn-primary" onclick="generatePassword()" style="width:auto;padding:12px 32px">
+            Generate Password
+          </button>
+          <div id="generated-result" style="margin-top:20px;font-family:monospace;font-size:16px;word-break:break-all;color:var(--accent)"></div>
+          <button class="btn btn-secondary btn-sm" id="copy-gen-btn" style="margin-top:12px;width:auto"
+                  onclick="copyGenerated()" onclick="copyGenerated()">Copy to Clipboard</button>
+        </div>
+
+        <!-- Settings View -->
+        <div id="view-settings" class="hidden">
+          <h3 style="margin-bottom:20px">Settings</h3>
+          <div class="input-group">
+            <label>Clipboard Auto-Clear (seconds)</label>
+            <input type="number" id="setting-clipboard-ttl" value="30" min="5" max="300" />
+          </div>
+          <div class="input-group">
+            <label>Auto-Lock Timeout (minutes)</label>
+            <input type="number" id="setting-auto-lock" value="15" min="1" max="120" />
+          </div>
+          <button class="btn btn-primary" onclick="saveSettings()" style="width:auto">Save Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-indicator">
+        <span class="status-dot unlocked" id="status-dot"></span>
+        <span id="status-text">Vault unlocked</span>
+      </div>
+      <span id="record-count">0 secrets</span>
+    </div>
+  </div>
+
+  <!-- Add/Edit Modal -->
+  <div class="modal-overlay" id="add-modal">
+    <div class="modal">
+      <h3 id="modal-title">Add Secret</h3>
+      <div class="input-group">
+        <label for="record-id">Record ID</label>
+        <input type="text" id="record-id" placeholder="e.g., github-pat" />
+      </div>
+      <div class="input-group">
+        <label for="record-value">Value</label>
+        <input type="password" id="record-value" placeholder="Secret value" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="doSave()">Save</button>
+      </div>
+      <p class="error-msg" id="modal-error" style="margin-top:12px"></p>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script>
+    // ─── IPC Wrappers ─────────────────────────────────────────────────────
+
+    const __TAURI__ = window.__TAURI__;
+    const { invoke } = __TAURI__;
+    const { listen } = __TAURI__.event;
+
+    async function tauriInvoke(cmd, ...args) {
+      try {
+        return await invoke(cmd, ...args);
+      } catch (e) {
+        showToast(`Error: ${e}`, 'error');
+        throw e;
+      }
+    }
+
+    // ─── State ────────────────────────────────────────────────────────────
+
+    let allRecords = [];
+
+    // ─── Lock / Unlock ────────────────────────────────────────────────────
+
+    function showCreateForm() {
+      document.getElementById('create-form').classList.remove('hidden');
+      document.getElementById('unlock-form').classList.add('hidden');
+    }
+
+    function showUnlockForm() {
+      document.getElementById('create-form').classList.add('hidden');
+      document.getElementById('unlock-form').classList.remove('hidden');
+    }
+
+    async function doCreate() {
+      const pw = document.getElementById('create-password').value;
+      const confirm = document.getElementById('create-confirm').value;
+      const errEl = document.getElementById('create-error');
+
+      if (!pw || pw.length < 8) {
+        errEl.textContent = 'Password must be at least 8 characters';
+        errEl.style.display = 'block';
+        return;
+      }
+      if (pw !== confirm) {
+        errEl.textContent = 'Passwords do not match';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      try {
+        await tauriInvoke('create_vault', { password: pw });
+        showApp();
+      } catch (e) {
+        errEl.textContent = `Creation failed: ${e}`;
+        errEl.style.display = 'block';
+      }
+    }
+
+    async function doUnlock() {
+      const pw = document.getElementById('unlock-password').value;
+      const errEl = document.getElementById('unlock-error');
+
+      if (!pw) {
+        errEl.textContent = 'Enter your password';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      try {
+        await tauriInvoke('unlock_vault', { password: pw });
+        showApp();
+      } catch (e) {
+        errEl.textContent = 'Wrong password or corrupted vault';
+        errEl.style.display = 'block';
+      }
+    }
+
+    async function lockVault() {
+      await tauriInvoke('lock_vault');
+      showLockScreen();
+    }
+
+    // ─── UI Navigation ────────────────────────────────────────────────────
+
+    function showApp() {
+      document.getElementById('lock-screen').classList.remove('active');
+      document.getElementById('app-screen').classList.add('active');
+      loadRecords();
+    }
+
+    function showLockScreen() {
+      document.getElementById('app-screen').classList.remove('active');
+      document.getElementById('lock-screen').classList.add('active');
+      document.getElementById('unlock-password').value = '';
+      showUnlockForm();
+      updateStatus(false);
+    }
+
+    function showView(view) {
+      document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
+
+      document.getElementById(`view-${view}`).classList.remove('hidden');
+      event.target.closest('.sidebar-btn').classList.add('active');
+    }
+
+    // ─── Records ──────────────────────────────────────────────────────────
+
+    async function loadRecords() {
+      try {
+        allRecords = await tauriInvoke('list_records');
+        renderRecords(allRecords);
+        updateStatus(true);
+      } catch (e) {
+        showToast(`Failed to load records: ${e}`, 'error');
+      }
+    }
+
+    function renderRecords(records) {
+      const grid = document.getElementById('record-grid');
+      grid.innerHTML = '';
+
+      if (records.length === 0) {
+        grid.innerHTML = '<p style="color:var(--text-secondary);padding:40px;text-align:center">No secrets yet. Click "Add Secret" to get started.</p>';
+        return;
+      }
+
+      for (const id of records) {
+        const card = document.createElement('div');
+        card.className = 'record-card';
+        card.innerHTML = `
+          <div class="record-id">${escapeHtml(id)}</div>
+          <div class="record-meta">Click to reveal</div>
+          <div class="actions">
+            <button class="btn btn-secondary btn-sm" onclick="copySecret('${escapeHtml(id)}')">📋 Copy</button>
+            <button class="btn btn-secondary btn-sm" onclick="getAndShow('${escapeHtml(id)}')">👁 View</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteSecret('${escapeHtml(id)}')">🗑</button>
+          </div>
+        `;
+        grid.appendChild(card);
+      }
+
+      document.getElementById('record-count').textContent = `${records.length} secret${records.length !== 1 ? 's' : ''}`;
+    }
+
+    function filterRecords() {
+      const query = document.getElementById('search-box').value.toLowerCase();
+      const filtered = allRecords.filter(id => id.toLowerCase().includes(query));
+      renderRecords(filtered);
+    }
+
+    async function getAndShow(id) {
+      try {
+        const value = await tauriInvoke('get_secret', { id });
+        showToast(`Secret: ${value.substring(0, 50)}${value.length > 50 ? '...' : ''}`, 'success');
+      } catch (e) {
+        showToast(`Failed: ${e}`, 'error');
+      }
+    }
+
+    async function copySecret(id) {
+      try {
+        const value = await tauriInvoke('get_secret', { id });
+        await tauriInvoke('copy_to_clipboard', { text: value, ttlSeconds: 30 });
+        showToast('Copied to clipboard (clears in 30s)', 'success');
+      } catch (e) {
+        showToast(`Failed: ${e}`, 'error');
+      }
+    }
+
+    async function deleteSecret(id) {
+      if (!confirm(`Delete secret "${id}"? This cannot be undone.`)) return;
+      try {
+        await tauriInvoke('delete_secret', { id });
+        showToast('Deleted', 'success');
+        loadRecords();
+      } catch (e) {
+        showToast(`Failed: ${e}`, 'error');
+      }
+    }
+
+    // ─── Add / Edit Modal ─────────────────────────────────────────────────
+
+    function showAddModal() {
+      document.getElementById('add-modal').classList.add('active');
+      document.getElementById('modal-title').textContent = 'Add Secret';
+      document.getElementById('record-id').value = '';
+      document.getElementById('record-value').value = '';
+      document.getElementById('modal-error').style.display = 'none';
+    }
+
+    function closeModal() {
+      document.getElementById('add-modal').classList.remove('active');
+    }
+
+    async function doSave() {
+      const id = document.getElementById('record-id').value.trim();
+      const value = document.getElementById('record-value').value;
+      const errEl = document.getElementById('modal-error');
+
+      if (!id) { errEl.textContent = 'Record ID is required'; errEl.style.display = 'block'; return; }
+      if (!value) { errEl.textContent = 'Value is required'; errEl.style.display = 'block'; return; }
+
+      try {
+        await tauriInvoke('set_secret', { id, value });
+        closeModal();
+        showToast('Secret saved', 'success');
+        loadRecords();
+      } catch (e) {
+        errEl.textContent = `Save failed: ${e}`;
+        errEl.style.display = 'block';
+      }
+    }
+
+    // ─── Generator ────────────────────────────────────────────────────────
+
+    async function generatePassword() {
+      const length = parseInt(document.getElementById('gen-length').value);
+      const symbols = document.getElementById('gen-symbols').checked;
+      const result = await tauriInvoke('generate_password', { length, includeSymbols: symbols });
+      document.getElementById('generated-result').textContent = result;
+    }
+
+    async function copyGenerated() {
+      const text = document.getElementById('generated-result').textContent;
+      if (!text) return;
+      await tauriInvoke('copy_to_clipboard', { text, ttlSeconds: 30 });
+      showToast('Copied (clears in 30s)', 'success');
+    }
+
+    // ─── Settings ─────────────────────────────────────────────────────────
+
+    async function saveSettings() {
+      showToast('Settings saved', 'success');
+    }
+
+    // ─── Export ────────────────────────────────────────────────────────────
+
+    async function exportVault() {
+      const dest = await __TAURI__.dialog.save({
+        defaultPath: 'vault-backup.enc',
+        filters: [{ name: 'Vault Backup', extensions: ['enc'] }]
+      });
+      if (!dest) return;
+      try {
+        await tauriInvoke('export_vault', dest);
+        showToast('Vault exported', 'success');
+      } catch (e) {
+        showToast(`Export failed: ${e}`, 'error');
+      }
+    }
+
+    // ─── Utilities ────────────────────────────────────────────────────────
+
+    function updateStatus(unlocked) {
+      const dot = document.getElementById('status-dot');
+      const text = document.getElementById('status-text');
+      dot.className = 'status-dot ' + (unlocked ? 'unlocked' : 'locked');
+      text.textContent = unlocked ? 'Vault unlocked' : 'Vault locked';
+    }
+
+    function showToast(message, type = '') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // ─── Auto-lock ────────────────────────────────────────────────────────
+
+    let autoLockTimer;
+
+    function resetAutoLock() {
+      clearTimeout(autoLockTimer);
+      autoLockTimer = setTimeout(() => {
+        if (document.getElementById('app-screen').classList.contains('active')) {
+          lockVault();
+        }
+      }, 15 * 60 * 1000); // 15 minutes
+    }
+
+    document.addEventListener('mousemove', resetAutoLock);
+    document.addEventListener('keydown', resetAutoLock);
+    resetAutoLock();
+
+    // ─── Init ─────────────────────────────────────────────────────────────
+
+    // Check if vault exists — show create or unlock form
+    try {
+      const exists = await __TAURI__.fs.exists(defaultVaultPath());
+      if (exists) {
+        showUnlockForm();
+      } else {
+        showCreateForm();
+      }
+    } catch (e) {
+      // If we can't check, default to create
+      showCreateForm();
+    }
+
+    async function defaultVaultPath() {
+      const home = await __TAURI__.path.homeDir();
+      return home + '/.config/secret-manager/vault.enc';
+    }
+  </script>
+</body>
+</html>

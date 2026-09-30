@@ -1,0 +1,3 @@
+# .cargo/config.toml — Cargo build configuration for the Secret Manager workspace.
+[net]
+git-fetch-with-cli = true

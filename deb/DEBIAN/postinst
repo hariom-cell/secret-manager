@@ -1,0 +1,10 @@
+#!/bin/bash
+# Post-install: create config directory
+set -e
+
+CONFIG_DIR="$HOME/.config/secret-manager"
+mkdir -p "$CONFIG_DIR"
+chmod 700 "$CONFIG_DIR"
+
+echo "Secret Manager installed. Run 'secret-manager create' to get started."
+echo "Vault stored at: $CONFIG_DIR/vault.enc"

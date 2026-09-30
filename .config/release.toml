@@ -1,0 +1,8 @@
+# cargo-release configuration
+# Usage: cargo release [minor|major|patch]
+#
+# This configures version bumping, git tagging, and publish order
+# for the workspace crates.
+
+workspace = true
+exclude-bump-paths = ["fuzz"]

@@ -1,0 +1,10 @@
+{
+  "name": "secret-manager-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "cd ../crates/vault-wasm && wasm-pack build --target web --out-dir ../../web-app/pkg",
+    "start": "npx serve . -p 3000",
+    "dev": "npm run build && npm run start"
+  }
+}

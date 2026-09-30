@@ -1,0 +1,17 @@
+{
+  "name": "secret-manager",
+  "version": "0.1.0",
+  "private": true,
+  "description": "End-to-end encrypted secret manager — release tooling",
+  "scripts": {
+    "build": "cargo build --release --bin vault-cli",
+    "build:all": "bash scripts/release.sh",
+    "build:deb": "bash scripts/build-deb.sh",
+    "install": "bash scripts/install.sh",
+    "test": "cargo test --workspace",
+    "lint": "cargo clippy --workspace --all-targets -- -D warnings"
+  },
+  "bin": {
+    "secret-manager": "./target/release/vault-cli"
+  }
+}

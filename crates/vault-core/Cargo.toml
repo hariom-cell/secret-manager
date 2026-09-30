@@ -1,0 +1,29 @@
+[package]
+name = "vault-core"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+description = "Cryptographic core for the Secret Manager vault"
+rust-version = "1.75"
+
+[dependencies]
+chacha20poly1305 = { version = "0.10", default-features = true }
+zeroize = { version = "1.8", features = ["derive"] }
+thiserror = "2.0"
+argon2 = { version = "0.5", features = ["std"] }
+rand = "0.8"
+subtle = "2.6"
+hkdf = "0.12"
+sha2 = "0.10"
+hmac = "0.12"
+x25519-dalek = { version = "2.0", features = ["static_secrets"] }
+ed25519-dalek = { version = "2.1", default-features = false, features = ["std"] }
+rand_core = { version = "0.6", features = ["std"] }
+getrandom = "0.2"
+libc = { version = "0.2", optional = true }
+
+[target.'cfg(unix)'.dependencies]
+libc = { version = "0.2" }
+
+[dev-dependencies]
+hex-literal = "0.4"

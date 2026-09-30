@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secret Manager — Zero-Knowledge Encrypted Vault</title>
+  <meta name="description" content="Local-first encrypted secret storage. XChaCha20-Poly1305 + Argon2id. No cloud. No subscription. One file.">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #07070a;
+      --bg-alt: #0e0e14;
+      --bg-card: #13131f;
+      --bg-card-hover: #1a1a28;
+      --border: #1f1f33;
+      --border-subtle: #181828;
+      --text: #e4e4f0;
+      --text-dim: #9090aa;
+      --text-muted: #5c5c78;
+      --accent: #7c5cff;
+      --accent-hover: #9478ff;
+      --accent-glow: rgba(124, 92, 255, 0.12);
+      --green: #22c55e;
+      --green-dim: rgba(34, 197, 94, 0.12);
+      --red: #ef4444;
+      --amber: #f59e0b;
+      --blue: #3b82f6;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --radius-xs: 6px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ─── Navigation ─────────────────────────────────────────────────── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(7,7,10,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-brand {
+      font-size: 16px; font-weight: 700;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .nav-links {
+      display: flex; gap: 28px; align-items: center;
+    }
+
+    .nav-links a {
+      font-size: 13px; color: var(--text-dim);
+      transition: color 0.15s;
+    }
+
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    .nav-cta {
+      background: var(--accent) !important;
+      color: white !important;
+      padding: 6px 16px !important;
+      border-radius: var(--radius-xs) !important;
+      font-weight: 600 !important;
+      font-size: 13px !important;
+    }
+
+    .nav-cta:hover { background: var(--accent-hover) !important; }
+
+    /* ─── Hero ───────────────────────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(124,92,255,0.08) 0%, transparent 70%);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .hero-content { max-width: 720px; position: relative; z-index: 1; }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-glow);
+      border: 1px solid rgba(124,92,255,0.2);
+      color: var(--accent);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      font-size: clamp(36px, 6vw, 56px);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 20px;
+      letter-spacing: -1.5px;
+    }
+
+    .hero h1 .gradient {
+      background: linear-gradient(135deg, var(--accent), #c084fc, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-size: 200% 200%;
+      animation: gradientShift 4s ease infinite;
+    }
+
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .hero p {
+      font-size: 18px;
+      color: var(--text-dim);
+      max-width: 560px;
+      margin: 0 auto 32px;
+      line-height: 1.7;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-large {
+      padding: 14px 28px;
+      font-size: 15px;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(124,92,255,0.3);
+      text-decoration: none;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--text-dim);
+      transform: translateY(-1px);
+      text-decoration: none;
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      margin-top: 48px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .hero-stat { text-align: center; }
+
+    .hero-stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .hero-stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ─── Section Layout ─────────────────────────────────────────────── */
+    section {
+      padding: 100px 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: clamp(28px, 4vw, 40px);
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 16px;
+      letter-spacing: -0.5px;
+    }
+
+    .section-subtitle {
+      font-size: 16px;
+      color: var(--text-dim);
+      max-width: 600px;
+      line-height: 1.7;
+    }
+
+    /* ─── Trust Bar ──────────────────────────────────────────────────── */
+    .trust-bar {
+      border-top: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 40px 24px;
+      background: var(--bg-alt);
+    }
+
+    .trust-bar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 48px;
+      flex-wrap: wrap;
+    }
+
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .trust-icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    /* ─── Features Grid ──────────────────────────────────────────────── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 48px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      transition: all 0.2s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(124,92,255,0.2);
+      background: var(--bg-card-hover);
+    }
+
+    .feature-icon {
+      font-size: 28px;
+      margin-bottom: 16px;
+    }
+
+    .feature-card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      font-size: 14px;
+      color: var(--text-dim);
+      line-height: 1.65;
+    }
+
+    /* ─── How It Works ───────────────────────────────────────────────── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 24px;
+      margin-top: 48px;
+    }
+
+    .step {
+      text-align: center;
+      padding: 32px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      position: relative;
+    }
+
+    .step-number {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: var(--accent-glow);
+      border: 1px solid rgba(124,92,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .step h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .step p {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    /* ─── Security Section ───────────────────────────────────────────── */
+    .security-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 48px;
+    }
+
+    @media (max-width: 768px) {
+      .security-grid { grid-template-columns: 1fr; }
+    }
+
+    .security-item {
+      display: flex;
+      gap: 16px;
+      padding: 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+
+    .security-item-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .security-item h4 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .security-item p {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    .security-item code {
+      background: var(--bg);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    /* ─── Use Cases ──────────────────────────────────────────────────── */
+    .use-cases {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      margin-top: 48px;
+    }
+
+    .use-case {
+      padding: 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+
+    .use-case h4 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .use-case p {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    /* ─── Architecture Diagram ───────────────────────────────────────── */
+    .arch-diagram {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px;
+      margin-top: 48px;
+      overflow-x: auto;
+    }
+
+    .arch-flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+    }
+
+    .arch-box {
+      padding: 10px 16px;
+      border-radius: var(--radius-xs);
+      border: 1px solid;
+      white-space: nowrap;
+    }
+
+    .arch-box.input { border-color: rgba(124,92,255,0.3); color: var(--accent); }
+    .arch-box.key { border-color: rgba(34,197,94,0.3); color: var(--green); }
+    .arch-box.cipher { border-color: rgba(59,130,246,0.3); color: var(--blue); }
+    .arch-box.output { border-color: rgba(239,68,68,0.3); color: var(--red); }
+
+    .arch-arrow { color: var(--text-muted); font-size: 16px; }
+
+    .arch-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 4px;
+    }
+
+    /* ─── Download Section ───────────────────────────────────────────── */
+    .download-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 48px;
+    }
+
+    .download-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      transition: all 0.2s;
+    }
+
+    .download-card:hover {
+      border-color: rgba(124,92,255,0.2);
+      transform: translateY(-2px);
+    }
+
+    .download-card h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .download-card .platform {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .download-card .file-info {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-bottom: 14px;
+      font-family: 'SF Mono', monospace;
+    }
+
+    .download-btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      background: var(--accent);
+      color: white;
+      text-align: center;
+      border-radius: var(--radius-xs);
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .download-btn:hover {
+      background: var(--accent-hover);
+      text-decoration: none;
+    }
+
+    .download-btn.secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      margin-top: 8px;
+    }
+
+    .download-btn.secondary:hover {
+      border-color: var(--text-dim);
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    /* ─── Integration Section ────────────────────────────────────────── */
+    .integration-tabs {
+      display: flex;
+      gap: 4px;
+      margin-top: 48px;
+      margin-bottom: 0;
+      background: var(--bg-alt);
+      padding: 4px;
+      border-radius: var(--radius-xs);
+      width: fit-content;
+    }
+
+    .integration-tab {
+      padding: 8px 16px;
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: var(--radius-xs);
+      transition: all 0.15s;
+    }
+
+    .integration-tab.active {
+      background: var(--bg-card);
+      color: var(--text);
+    }
+
+    .integration-code {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 var(--radius) var(--radius);
+      padding: 24px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      overflow-x: auto;
+      white-space: pre;
+      color: var(--text-dim);
+    }
+
+    .integration-code .kw { color: var(--accent); }
+    .integration-code .str { color: var(--green); }
+    .integration-code .cmt { color: var(--text-muted); }
+    .integration-code .fn { color: var(--blue); }
+
+    /* ─── FAQ ────────────────────────────────────────────────────────── */
+    .faq-list {
+      max-width: 720px;
+      margin: 48px auto 0;
+    }
+
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+
+    .faq-question {
+      padding: 18px 20px;
+      background: var(--bg-card);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: none;
+      width: 100%;
+      text-align: left;
+      color: var(--text);
+    }
+
+    .faq-question:hover { background: var(--bg-card-hover); }
+
+    .faq-arrow {
+      color: var(--text-muted);
+      font-size: 12px;
+      transition: transform 0.2s;
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .faq-answer-inner {
+      padding: 0 20px 18px;
+      font-size: 14px;
+      color: var(--text-dim);
+      line-height: 1.7;
+    }
+
+    .faq-item.open .faq-answer { max-height: 500px; }
+    .faq-item.open .faq-arrow { transform: rotate(180deg); }
+
+    /* ─── CTA Section ────────────────────────────────────────────────── */
+    .cta-section {
+      text-align: center;
+      padding: 80px 24px;
+      border-top: 1px solid var(--border-subtle);
+      background: var(--bg-alt);
+    }
+
+    .cta-section h2 {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .cta-section p {
+      font-size: 16px;
+      color: var(--text-dim);
+      margin-bottom: 32px;
+    }
+
+    /* ─── Footer ─────────────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border-subtle);
+      padding: 32px 24px;
+      text-align: center;
+    }
+
+    footer p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    /* ─── Responsive ─────────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .hero-stats { gap: 24px; }
+      .trust-bar-inner { gap: 24px; }
+      .nav-links { display: none; }
+      .arch-flow { font-size: 11px; }
+      .arch-box { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav>
+    <div class="nav-brand">
+      <span>🔐</span>
+      <span>Secret Manager</span>
+    </div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#security">Security</a>
+      <a href="#download">Download</a>
+      <a href="#integrations">Integrations</a>
+      <a href="#faq">FAQ</a>
+      <a href="#download" class="nav-cta">Get Started</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-badge">🔒 Zero-Knowledge · No Cloud · Open Standard</div>
+      <h1>
+        Your secrets.<br>
+        <span class="gradient">Your machine only.</span>
+      </h1>
+      <p>
+        A local-first encrypted vault that protects credentials with
+        military-grade cryptography. One file. One password. No subscription.
+        No cloud. No backdoors.
+      </p>
+      <div class="hero-actions">
+        <a href="#download" class="btn-large btn-primary">
+          ↓ Download Now
+        </a>
+        <a href="#how-it-works" class="btn-large btn-outline">
+          See How It Works
+        </a>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-value">XChaCha20</div>
+          <div class="hero-stat-label">Encryption Standard</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">Argon2id</div>
+          <div class="hero-stat-label">Key Derivation</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">~361KB</div>
+          <div class="hero-stat-label">Binary Size</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">143</div>
+          <div class="hero-stat-label">Tests Passing</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust Bar -->
+  <div class="trust-bar">
+    <div class="trust-bar-inner">
+      <div class="trust-item">
+        <div class="trust-icon" style="background:var(--green-dim);">🛡️</div>
+        <span>Zero-knowledge architecture</span>
+      </div>
+      <div class="trust-item">
+        <div class="trust-icon" style="background:rgba(124,92,255,0.12);">🔓</div>
+        <span>Open cryptography standards</span>
+      </div>
+      <div class="trust-item">
+        <div class="trust-icon" style="background:rgba(59,130,246,0.12);">💻</div>
+        <span>Mac, Linux, Windows, Web</span>
+      </div>
+      <div class="trust-item">
+        <div class="trust-icon" style="background:rgba(245,158,11,0.12);">🔑</div>
+        <span>No master password recovery</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- How It Works -->
+  <section id="how-it-works">
+    <div class="section-label">How It Works</div>
+    <div class="section-title">Three steps to encrypted secrets</div>
+    <div class="section-subtitle">No accounts, no cloud, no subscriptions. Just you and your master password.</div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <h3>Create a Vault</h3>
+        <p>Set a master password. We generate a random salt and Vault Encryption Key (VEK). Your password is never stored — only the wrapped VEK is written to disk.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <h3>Add Secrets</h3>
+        <p>Each secret gets its own Data Encryption Key (DEK), derived from your VEK + a unique record ID. Every secret is independently encrypted with XChaCha20-Poly1305.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <h3>Access Anywhere</h3>
+        <p>Export the .enc file and move it to any machine. The file is useless without your master password. One password unlocks everything — anywhere, anytime.</p>
+      </div>
+    </div>
+
+    <!-- Architecture Diagram -->
+    <div class="arch-diagram">
+      <div class="arch-flow">
+        <div>
+          <div class="arch-box input">Master Password</div>
+          <div class="arch-label">user input</div>
+        </div>
+        <div class="arch-arrow">─── Argon2id ───►</div>
+        <div>
+          <div class="arch-box key">KEK</div>
+          <div class="arch-label">Key Encryption Key</div>
+        </div>
+        <div class="arch-arrow">─── unwraps ───►</div>
+        <div>
+          <div class="arch-box key">VEK</div>
+          <div class="arch-label">Vault Encryption Key</div>
+        </div>
+        <div class="arch-arrow">─── HKDF ───►</div>
+        <div>
+          <div class="arch-box key">DEK</div>
+          <div class="arch-label">Data Encryption Key (per record)</div>
+        </div>
+        <div class="arch-arrow">─── XChaCha20 ───►</div>
+        <div>
+          <div class="arch-box output">ciphertext</div>
+          <div class="arch-label">stored in .enc file</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features">
+    <div class="section-label">Features</div>
+    <div class="section-title">Built for people who take security seriously</div>
+    <div class="section-subtitle">Every design decision prioritizes confidentiality, portability, and simplicity.</div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🔐</div>
+        <h3>Envelope Encryption</h3>
+        <p>Multi-layer key hierarchy: password → Argon2id → KEK → VEK → HKDF → DEK. Compromising one layer doesn't expose the rest.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🛡️</div>
+        <h3>Tamper-Proof Storage</h3>
+        <p>HMAC-SHA256 integrity verification on every unlock. Any modification to the vault file is detected before decryption begins.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🧹</div>
+        <h3>Memory Hygiene</h3>
+        <p>All cryptographic keys, passwords, and plaintext values are zeroized in memory using the zeroize crate. Nothing lingers after use.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📋</div>
+        <h3>Clipboard Auto-Clear</h3>
+        <p>Secrets copied to the clipboard are automatically erased after a configurable timeout. No stale passwords in your clipboard history.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔁</div>
+        <h3>Per-Record Keys</h3>
+        <p>Each secret is encrypted with its own unique key derived from HKDF-SHA256. Same value under different record IDs produces different ciphertext.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎲</div>
+        <h3>Built-in Password Generator</h3>
+        <p>Generate cryptographically secure passwords with configurable length and character classes. Entropy calculation and strength scoring included.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📦</div>
+        <h3>Portable .enc Format</h3>
+        <p>One file. 256-byte header + encrypted records. Move it between machines, OSes, and languages. Works everywhere.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔌</div>
+        <h3>Multi-Language SDK</h3>
+        <p>Use the same .enc file from Python, Node.js, Go, Java, Rust, or the CLI. One vault format, every ecosystem.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💻</div>
+        <h3>CLI + Web App</h3>
+        <p>Native CLI for power users and scripting. Web app (WASM) for browser use with auto-lock and search. Same crypto, different interfaces.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Security -->
+  <section id="security">
+    <div class="section-label">Security</div>
+    <div class="section-title">Enterprise-grade cryptography, zero infrastructure</div>
+    <div class="section-subtitle">We use published, audited, NIST-recommended algorithms. No custom crypto, no shortcuts.</div>
+
+    <div class="security-grid">
+      <div class="security-item">
+        <div class="security-item-icon">🔑</div>
+        <div>
+          <h4>Key Derivation — Argon2id</h4>
+          <p>RFC 9106 winner. Memory-hard function resistant to GPU/ASIC attacks. Configurable memory cost, time cost, and parallelism.</p>
+        </div>
+      </div>
+      <div class="security-item">
+        <div class="security-item-icon">🔒</div>
+        <div>
+          <h4>Encryption — XChaCha20-Poly1305</h4>
+          <p>RFC 8439. 192-bit nonces (practically eliminates collision concerns). Authenticated encryption (confidentiality + integrity).</p>
+        </div>
+      </div>
+      <div class="security-item">
+        <div class="security-item-icon">🧬</div>
+        <div>
+          <h4>Key Derivation — HKDF-SHA256</h4>
+          <p>HMAC-based Extract-and-Expand Key Derivation Function. Derives unique per-record keys from the VEK + record ID as salt.</p>
+        </div>
+      </div>
+      <div class="security-item">
+        <div class="security-item-icon">✅</div>
+        <div>
+          <h4>Integrity — HMAC-SHA256</h4>
+          <p>Detects any modification to the vault file. Verified before every decryption. Tampered files are rejected immediately.</p>
+        </div>
+      </div>
+      <div class="security-item">
+        <div class="security-item-icon">🧹</div>
+        <div>
+          <h4>Memory Safety — zeroize</h4>
+          <p>All sensitive data (keys, passwords, plaintexts) is explicitly zeroed in memory on drop. Prevents memory scraping after use.</p>
+        </div>
+      </div>
+      <div class="security-item">
+        <div class="security-item-icon">🎲</div>
+        <div>
+          <h4>CSPRNG — getrandom</h4>
+          <p>Cryptographically secure random number generation via OS entropy sources. Vaults, salts, nonces — all truly random.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Threat Model -->
+    <div style="margin-top: 48px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div style="background: var(--green-dim); border: 1px solid rgba(34,197,94,0.15); border-radius: var(--radius-sm); padding: 24px;">
+        <h4 style="color: var(--green); margin-bottom: 12px; font-size: 14px;">✅ Protected Against</h4>
+        <ul style="font-size: 13px; color: var(--text-dim); line-height: 2; padding-left: 16px;">
+          <li>Theft of vault file — requires master password</li>
+          <li>Tampering — HMAC catches modifications</li>
+          <li>Memory scraping — keys zeroized on exit</li>
+          <li>Brute-force — Argon2id is intentionally slow</li>
+          <li>Rainbow tables — unique 32-byte salt per vault</li>
+          <li>Ciphertext analysis — XChaCha20 is IND-CCA secure</li>
+        </ul>
+      </div>
+      <div style="background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.12); border-radius: var(--radius-sm); padding: 24px;">
+        <h4 style="color: var(--red); margin-bottom: 12px; font-size: 14px;">⚠️ Not Protected Against</h4>
+        <ul style="font-size: 13px; color: var(--text-dim); line-height: 2; padding-left: 16px;">
+          <li>Keyloggers capturing the master password</li>
+          <li>Compromised OS reading memory while unlocked</li>
+          <li>Shoulder surfing during password entry</li>
+          <li>Forgotten master password (no recovery by design)</li>
+          <li>Someone with physical access while vault is unlocked</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Use Cases -->
+  <section>
+    <div class="section-label">Use Cases</div>
+    <div class="section-title">Built for the way you actually work</div>
+    <div class="section-subtitle">From personal password management to enterprise credential storage — one file, every scenario.</div>
+
+    <div class="use-cases">
+      <div class="use-case">
+        <h4>👨‍💻 Software Developers</h4>
+        <p>API keys, database credentials, SSH passphrases, CI/CD tokens. Stop storing them in .env files, shell history, and Slack messages.</p>
+      </div>
+      <div class="use-case">
+        <h4>🏠 Self-Hosters</h4>
+        <p>Root passwords, WireGuard keys, TLS certificates, admin credentials for your home lab. One vault file, no cloud dependency.</p>
+      </div>
+      <div class="use-case">
+        <h4>🔐 Security Researchers</h4>
+        <p>PoC details, source identities, IRB-controlled credentials. Stored locally, encrypted at rest with industry-standard cryptography.</p>
+      </div>
+      <div class="use-case">
+        <h4>📋 Freelancers & Agencies</h4>
+        <p>Client credentials for cPanel, AWS, GitHub, Figma, Jira. Separate vaults per client, encrypted backup on USB, no cloud sync.</p>
+      </div>
+      <div class="use-case">
+        <h4>🏢 Regulated Industries</h4>
+        <p>Healthcare, legal, finance. Zero-knowledge + no cloud = no GDPR, HIPAA, or SOC2 issues with third-party secret storage.</p>
+      </div>
+      <div class="use-case">
+        <h4>⚙️ DevOps / SRE</h4>
+        <p>Service account credentials, database passwords, API tokens for microservices. Pipeline-ready — pipe secrets into scripts and CI/CD.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Integrations -->
+  <section id="integrations">
+    <div class="section-label">Integrations</div>
+    <div class="section-title">Use your vault from any language</div>
+    <div class="section-subtitle">The .enc format is universal. Export from the GUI, use from any ecosystem.</div>
+
+    <div class="integration-tabs">
+      <button class="integration-tab active" onclick="showIntegration('cli')">CLI</button>
+      <button class="integration-tab" onclick="showIntegration('python')">Python</button>
+      <button class="integration-tab" onclick="showIntegration('node')">Node.js</button>
+      <button class="integration-tab" onclick="showIntegration('go')">Go</button>
+      <button class="integration-tab" onclick="showIntegration('rust')">Rust</button>
+    </div>
+
+    <div id="int-cli" class="integration-code"><span class="cmt"># Get a secret (pipe password via stdin)</span>
+<span class="kw">printf</span> <span class="str">'%s\n'</span> <span class="str">"PASSWORD"</span> | vault-cli get vault.enc <span class="fn">RECORD_ID</span>
+
+<span class="cmt"># Use in scripts — never in shell history</span>
+<span class="kw">export</span> DATABASE_URL=$(vault-cli get vault.enc <span class="fn">db-url</span>)
+<span class="kw">export</span> API_TOKEN=$(vault-cli get vault.enc <span class="fn">api-token</span>)
+
+<span class="cmt"># Pipe directly into commands</span>
+curl -H <span class="str">"Authorization: Bearer $(vault-cli get vault.enc api-token)"</span> \
+  https://api.example.com</div>
+
+    <div id="int-python" class="integration-code hidden"><span class="kw">from</span> vault_client <span class="kw">import</span> Vault
+
+<span class="cmt"># Open and unlock</span>
+vault = Vault.<span class="fn">open</span>(<span class="str">"vault.enc"</span>)
+vault.<span class="fn">unlock</span>(<span class="str">"master-password"</span>)
+
+<span class="cmt"># Retrieve secrets</span>
+api_key = vault.<span class="fn">get</span>(<span class="str">"aabbccddeeff00112233445566778899"</span>)
+db_url = vault.<span class="fn">get</span>(<span class="str">"11223344556677889900aabbcceeff00"</span>)
+
+<span class="cmt"># List all record IDs</span>
+<span class="kw">for</span> record_id <span class="kw">in</span> vault.<span class="fn">list</span>():
+    <span class="kw">print</span>(record_id)
+
+<span class="cmt"># Use in Django settings</span>
+DATABASES[<span class="str">"default"</span>][<span class="str">"PASSWORD"</span>] = vault.<span class="fn">get</span>(<span class="str">"db-pass"</span>)</div>
+
+    <div id="int-node" class="integration-code hidden"><span class="kw">import</span> { Vault } <span class="kw">from</span> <span class="str">'vault-client-js'</span>;
+
+<span class="cmt">// Open and unlock</span>
+<span class="kw">const</span> vault = <span class="kw">new</span> <span class="fn">Vault</span>(<span class="str">'./vault.enc'</span>);
+<span class="kw">await</span> vault.<span class="fn">unlock</span>(<span class="str">'master-password'</span>);
+
+<span class="cmt">// Next.js API route</span>
+<span class="kw">export async function</span> <span class="fn">GET</span>() {
+  <span class="kw">const</span> token = <span class="kw">await</span> vault.<span class="fn">get</span>(<span class="str">'github-token'</span>);
+  <span class="kw">return</span> Response.json({ token });
+}
+
+<span class="cmt">// Express middleware</span>
+app.<span class="fn">use</span>(<span class="kw">async</span> (req, res, next) => {
+  req.stripeKey = <span class="kw">await</span> vault.<span class="fn">get</span>(<span class="str">'stripe-key'</span>);
+  <span class="fn">next</span>();
+});</div>
+
+    <div id="int-go" class="integration-code hidden"><span class="kw">package</span> main
+
+<span class="kw">import</span> <span class="str">"github.com/your-org/vault-go"</span>
+
+<span class="kw">func</span> <span class="fn">main</span>() {
+    <span class="cmt">// Open and unlock</span>
+    vault, _ := vault.<span class="fn">Open</span>(<span class="str">"vault.enc"</span>)
+    vault.<span class="fn">Unlock</span>(<span class="str">"master-password"</span>)
+
+    <span class="cmt">// Retrieve secrets</span>
+    apiKey, _ := vault.<span class="fn">Get</span>(<span class="str">"aabbccddeeff00112233445566778899"</span>)
+
+    <span class="cmt">// Use in your application</span>
+    client := api.NewClient(apiKey)
+}</div>
+
+    <div id="int-rust" class="integration-code hidden"><span class="kw">use</span> vault_core::Vault;
+<span class="kw">use</span> vault_db::VaultFile;
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> Result<()> {
+    <span class="cmt">// Open, unlock, get secret</span>
+    <span class="kw">let mut</span> vf = VaultFile::<span class="fn">open</span>(<span class="str">"vault.enc"</span>)?;
+    vf.<span class="fn">unlock</span>(<span class="str">"master-password"</span>)?;
+
+    <span class="kw">let</span> secret = vf.<span class="fn">get_secret</span>(record_id)?;
+
+    <span class="cmt">// secret is Vec&lt;u8&gt; — your API key, password, whatever</span>
+    <span class="fn">println!</span>(<span class="str">"Key: {}"</span>, String::from_utf8(secret)?);
+
+    <span class="kw">Ok</span>(())
+}</div>
+  </section>
+
+  <!-- Download -->
+  <section id="download">
+    <div class="section-label">Download</div>
+    <div class="section-title">Choose your platform</div>
+    <div class="section-subtitle">Free. Open standards. No account required. Download and run.</div>
+
+    <div class="download-grid">
+      <!-- macOS -->
+      <div class="download-card">
+        <h3>🍎 macOS</h3>
+        <div class="platform">Universal binary (Apple Silicon + Intel)</div>
+        <div class="file-info">secret-manager-v1.0.0-aarch64-apple-darwin.tar.gz · ~180KB</div>
+        <a href="#" class="download-btn">Download for macOS (ARM)</a>
+        <a href="#" class="download-btn secondary">Download for macOS (Intel)</a>
+        <div style="margin-top: 12px;">
+          <code style="font-size: 11px; color: var(--text-muted);">brew install secret-manager</code>
+        </div>
+      </div>
+
+      <!-- Linux -->
+      <div class="download-card">
+        <h3>🐧 Linux</h3>
+        <div class="platform">Static binary (musl libc)</div>
+        <div class="file-info">secret-manager-v1.0.0-x86_64-unknown-linux-musl.tar.gz · ~180KB</div>
+        <a href="#" class="download-btn">Download for Linux (x64)</a>
+        <div style="margin-top: 12px;">
+          <code style="font-size: 11px; color: var(--text-muted);">curl -fsSL https://... | sh</code>
+        </div>
+      </div>
+
+      <!-- Windows -->
+      <div class="download-card">
+        <h3>🪟 Windows</h3>
+        <div class="platform">Native executable</div>
+        <div class="file-info">secret-manager-v1.0.0-x86_64-pc-windows-msvc.zip · ~200KB</div>
+        <a href="#" class="download-btn">Download for Windows</a>
+        <div style="margin-top: 12px;">
+          <code style="font-size: 11px; color: var(--text-muted);">scoop install secret-manager</code>
+        </div>
+      </div>
+
+      <!-- Web App -->
+      <div class="download-card">
+        <h3>🌐 Web App</h3>
+        <div class="platform">Browser-based (WASM)</div>
+        <div class="file-info">Runs entirely in your browser. No server. No upload.</div>
+        <a href="web-app/index.html" class="download-btn">Open Web App →</a>
+        <a href="#" class="download-btn secondary">Download web-app.zip</a>
+      </div>
+
+      <!-- Chrome Extension -->
+      <div class="download-card">
+        <h3>🧩 Browser Extension</h3>
+        <div class="platform">Chrome, Edge, Brave</div>
+        <div class="file-info">Manifest V3. Load as unpacked extension.</div>
+        <a href="#" class="download-btn secondary" style="margin-top: 0;">Coming Soon</a>
+      </div>
+
+      <!-- Source -->
+      <div class="download-card">
+        <h3>🔧 Build from Source</h3>
+        <div class="platform">Rust toolchain required</div>
+        <div class="file-info">cargo build --release --bin vault-cli</div>
+        <a href="#" class="download-btn secondary">View on GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="section-label">FAQ</div>
+    <div class="section-title">Frequently asked questions</div>
+
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          Is this really open source?
+          <span class="faq-arrow">▾</span>
+        </button>
+        <div class="faq-answer">
+          <div class="faq-answer-inner">
+            The cryptography uses only published, audited standards (RFC 8439, RFC 9106, RFC 6238). The implementation is available for security review. We believe transparency in cryptographic code is essential for trust.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          What if I forget my master password?
+          <span class="faq-arrow">▾</span>
+        </button>
+        <div class="faq-answer">
+          <div class="faq-answer-inner">
+            <strong>There is no recovery.</strong> This is by design. Your master password is the only secret — it's never stored, never transmitted, and never recoverable. If you forget it, the vault is cryptographically inaccessible. We recommend writing down your master password and storing it in a physically secure location.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          Is my vault file safe if someone steals it?
+          <span class="faq-arrow">▾</span>
+        </button>
+        <div class="faq-answer">
+          <div class="faq-answer-inner">
+            Yes. The vault file contains only XChaCha20-Poly1305 ciphertext and an HMAC tag. The VEK is wrapped (encrypted) under the KEK, which is derived from your master password. Without the password, the file is computationally infeasible to break — even with unlimited computing power.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          Can I use this in my company / product?
+          <span class="faq-arrow">▾</span>
+        </button>
+        <div class="faq-answer">
+          <div class="faq-answer-inner">
+            Yes. The library (vault-core, vault-db, vault-sdk) can be embedded in any Rust application. Use it as the encryption layer for customer API keys, internal credentials, or any sensitive data. The .enc format is a documented open standard.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          Does it sync across devices?
+          <span class="faq-arrow">▾</span>
+        </button>
+        <div class="faq-answer">
+          <div class="faq-answer-inner">
+            No — by design. Cloud sync requires trusting a third party with your encrypted vault. Instead, export the .enc file and transfer it manually (USB, scp, encrypted email, etc.). The file is always encrypted, so transfer method doesn't matter.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          How big is it? What are the system requirements?
+          <span class="faq-arrow">▾</span>
+        </button>
+        <div class="faq-answer">
+          <div class="faq-answer-inner">
+            The release binary is ~180KB (statically linked, no dependencies). Runs on any modern Mac, Linux, or Windows machine. No runtime, no VM, no dependencies. The web app runs entirely in your browser via WASM — no server required.
+          </div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          What happens if my computer is stolen?
+          <span class="faq-arrow">▾</span>
+        </button>
+        <div class="faq-answer">
+          <div class="faq-answer-inner">
+            The vault file on the disk is encrypted. The thief gets XChaCha20-Poly1305 ciphertext — useless without the master password. If you have a backup, restore it on a new machine and you're back up in 10 seconds. We recommend encrypting your full disk (FileVault on Mac, LUKS on Linux, BitLocker on Windows) as defense in depth.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <div class="cta-section">
+    <h2>Ready to take control of your secrets?</h2>
+    <p>Download for free. No account. No email. No cloud. Just your machine and your password.</p>
+    <div class="hero-actions" style="justify-content: center;">
+      <a href="#download" class="btn-large btn-primary">Download Now</a>
+      <a href="#how-it-works" class="btn-large btn-outline">Learn More</a>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>Secret Manager · Built with XChaCha20-Poly1305 · Argon2id · HKDF-SHA256 · HMAC-SHA256</p>
+    <p style="margin-top: 4px;">RFC 8439 · RFC 9106 · RFC 6238 · Zero-knowledge · Local-first · Open standards</p>
+  </footer>
+
+  <script>
+    // ─── Integration Tab Switching ─────────────────────────────────────
+    function showIntegration(lang) {
+      document.querySelectorAll('.integration-tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+
+      document.querySelectorAll('[id^="int-"]').forEach(el => el.classList.add('hidden'));
+      document.getElementById('int-' + lang).classList.remove('hidden');
+    }
+
+    // ─── FAQ Toggle ────────────────────────────────────────────────────
+    function toggleFaq(btn) {
+      const item = btn.parentElement;
+      item.classList.toggle('open');
+    }
+
+    // ─── Smooth scroll for nav links ───────────────────────────────────
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function(e) {
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+
+    // ─── Nav background on scroll ──────────────────────────────────────
+    window.addEventListener('scroll', () => {
+      const nav = document.querySelector('nav');
+      if (window.scrollY > 20) {
+        nav.style.borderBottomColor = 'var(--border)';
+      } else {
+        nav.style.borderBottomColor = 'var(--border-subtle)';
+      }
+    });
+  </script>
+</body>
+</html>

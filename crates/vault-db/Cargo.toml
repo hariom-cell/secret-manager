@@ -1,0 +1,14 @@
+[package]
+name = "vault-db"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+description = "File-backed encrypted vault storage layer"
+rust-version = "1.75"
+
+[dependencies]
+vault-core = { path = "../vault-core" }
+thiserror = "2.0"
+zeroize = { version = "1.8", features = ["derive"] }
+
+[dev-dependencies]

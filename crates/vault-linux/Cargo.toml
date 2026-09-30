@@ -1,0 +1,15 @@
+[package]
+name = "vault-linux"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+description = "Linux platform crate for the Secret Manager vault"
+rust-version = "1.75"
+
+[dependencies]
+vault-core = { path = "../vault-core" }
+thiserror = "2.0"
+libc = { version = "0.2" }
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]

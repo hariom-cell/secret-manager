@@ -1,0 +1,16 @@
+Package: secret-manager
+Version: 0.1.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: libc6 (>= 2.35)
+Maintainer: Hariom Sehgal <hariomsehgal@users.noreply.github.com>
+Homepage: https://github.com/hariomsehgal/secret-manager
+Description: End-to-end encrypted secret manager
+ Uses XChaCha20-Poly1305 for record encryption, Argon2id for key
+ derivation, and HKDF-SHA256 for per-record keys. All crypto runs
+ locally — your secrets never leave your machine unencrypted.
+ .
+ Supports TOTP/MFA, password generation, backup/restore, and
+ key sharing. Envelope encryption: Master Password → Argon2id → KEK
+ → VEK → DEK → Record ciphertext.

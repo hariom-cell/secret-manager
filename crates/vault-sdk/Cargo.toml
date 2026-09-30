@@ -1,0 +1,18 @@
+[package]
+name = "vault-sdk"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+description = "Shared services for the Secret Manager (password generator, TOTP, backup, auto-lock)"
+rust-version = "1.75"
+
+[dependencies]
+vault-core = { path = "../vault-core" }
+vault-db = { path = "../vault-db" }
+thiserror = "2.0"
+hmac = "0.12"
+sha2 = "0.10"
+rand = "0.8"
+subtle = "2.6"
+zeroize = { version = "1.8", features = ["derive"] }
+getrandom = "0.2"

@@ -1,0 +1,16 @@
+[package]
+name = "vault-fuzz"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "fuzz_format_parse"
+path = "fuzz_targets/format_parse.rs"
+
+[[bin]]
+name = "fuzz_aead_roundtrip"
+path = "fuzz_targets/aead_roundtrip.rs"
+
+[dependencies]
+vault-core = { path = "../crates/vault-core" }
