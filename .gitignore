@@ -1,0 +1,10 @@
+target/
+*.enc
+*.pem
+.DS_Store
+node_modules/
+pkg/
+web-app/pkg/
+landing/test-vault.enc
+test-vault.enc
+*.swp
