@@ -63,7 +63,7 @@ impl LinuxKeyStore {
 impl KeyStore for LinuxKeyStore {
     fn store(&self, name: &str, data: &[u8]) -> Result<()> {
         let path = self.path_for(name);
-        std::fs::create_dir_all(&path.parent().unwrap())?;
+        std::fs::create_dir_all(path.parent().unwrap())?;
         std::fs::write(&path, data)?;
         #[cfg(unix)]
         {
@@ -219,7 +219,7 @@ impl LinuxSessionPersistence {
 impl SessionPersistence for LinuxSessionPersistence {
     fn save_token(&self, service: &str, account: &str, token: &SessionToken) -> Result<()> {
         let path = self.path_for(service, account);
-        std::fs::create_dir_all(&path.parent().unwrap())?;
+        std::fs::create_dir_all(path.parent().unwrap())?;
         let now_secs = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
         let stored = StoredToken {
@@ -387,8 +387,8 @@ impl LinuxPlatform {
     pub fn new() -> Self {
         Self {
             key_store: LinuxKeyStore::default(),
-            secure_input: LinuxSecureInput::default(),
-            clipboard: LinuxClipboard::default(),
+            secure_input: LinuxSecureInput,
+            clipboard: LinuxClipboard,
             session_persistence: LinuxSessionPersistence::default(),
         }
     }

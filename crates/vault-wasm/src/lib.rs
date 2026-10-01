@@ -11,14 +11,13 @@
 
 use std::collections::HashMap;
 use std::sync::Mutex;
-use rand::RngCore;
 use vault_core::{
     aead::{decrypt_record, encrypt_record, Ciphertext},
     dek::derive_dek,
     format::{deserialize_records, parse_header, serialize_header, serialize_records},
     kdf::{derive_kek, KdfParams},
     types::KeyBytes,
-    vek::{Vek, WrappedVek},
+    vek::Vek,
 };
 use wasm_bindgen::prelude::*;
 
@@ -40,7 +39,7 @@ static VAULT: Mutex<Option<VaultState>> = Mutex::new(None);
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 fn into_js_err(e: impl std::fmt::Display) -> JsValue {
-    JsError::new(&format!("{e}"))
+    JsError::new(&format!("{e}")).into()
 }
 
 fn require_unlocked() -> Result<std::sync::MutexGuard<'static, Option<VaultState>>, JsValue> {
@@ -48,15 +47,15 @@ fn require_unlocked() -> Result<std::sync::MutexGuard<'static, Option<VaultState
     if guard.is_some() {
         Ok(guard)
     } else {
-        Err(JsError::new("vault is locked"))
+        Err(JsError::new("vault is locked").into())
     }
 }
 
 fn hex_to_id(hex: &str) -> Result<[u8; 16], JsValue> {
     let bytes = hex::decode(hex)
-        .map_err(|e| JsError::new(&format!("invalid hex: {e}")))?;
+        .map_err(|e| JsValue::from(JsError::new(&format!("invalid hex: {e}"))))?;
     if bytes.len() != 16 {
-        return Err(JsError::new("record id must be 32 hex chars (16 bytes)"));
+        return Err(JsError::new("record id must be 32 hex chars (16 bytes)").into());
     }
     let mut id = [0u8; 16];
     id.copy_from_slice(&bytes);
@@ -65,7 +64,7 @@ fn hex_to_id(hex: &str) -> Result<[u8; 16], JsValue> {
 
 fn parse_salt(salt: &[u8]) -> Result<[u8; 32], JsValue> {
     if salt.len() != 32 {
-        return Err(JsError::new("salt must be 32 bytes"));
+        return Err(JsError::new("salt must be 32 bytes").into());
     }
     let mut arr = [0u8; 32];
     arr.copy_from_slice(salt);
@@ -134,7 +133,7 @@ pub fn create_vault(
 #[wasm_bindgen]
 pub fn unlock_vault(vault_bytes: &[u8], password: &str) -> Result<(), JsValue> {
     if vault_bytes.len() < vault_core::format::HEADER_SIZE {
-        return Err(JsError::new("vault bytes too short — not a valid vault file"));
+        return Err(JsValue::from(JsError::new("vault bytes too short — not a valid vault file")));
     }
 
     let header_bytes = &vault_bytes[..vault_core::format::HEADER_SIZE];
@@ -201,7 +200,7 @@ pub fn get_record(id_hex: &str) -> Result<Vec<u8>, JsValue> {
     let state = guard.as_ref().unwrap();
 
     let ciphertext = state.records.get(&id)
-        .ok_or_else(|| JsError::new("record not found"))?;
+        .ok_or_else(|| JsValue::from(JsError::new("record not found")))?;
 
     let dek = derive_dek(state.vek.as_key_bytes(), &id).map_err(into_js_err)?;
     decrypt_record(dek.as_key_bytes(), ciphertext).map_err(into_js_err)
@@ -317,7 +316,7 @@ pub fn generate_password(
     if symbols { classes.push(CharClass::Symbols); }
 
     if classes.is_empty() {
-        return Err(JsError::new("must enable at least one character class"));
+        return Err(JsValue::from(JsError::new("must enable at least one character class")));
     }
 
     let policy = PasswordPolicy {
@@ -325,7 +324,7 @@ pub fn generate_password(
         classes,
         avoid_ambiguous,
     };
-    vault_core::password::generate(&policy).map_err(into_js_err)
+    vault_sdk::password::generate(&policy).map_err(into_js_err)
 }
 
 /// Estimate entropy in bits for a password with the given parameters.
@@ -345,7 +344,7 @@ pub fn password_entropy_bits(
     if symbols { classes.push(CharClass::Symbols); }
 
     let policy = PasswordPolicy { length: length as usize, classes, avoid_ambiguous };
-    vault_core::password::entropy_bits(&policy)
+    vault_sdk::password::entropy_bits(&policy)
 }
 
 /// Compute strength level ("Weak"/"Fair"/"Strong"/"VeryStrong") for given entropy.
@@ -359,17 +358,17 @@ pub fn password_strength(entropy_bits: f64) -> String {
 /// Generate a 6-digit TOTP code from a base32 secret.
 #[wasm_bindgen]
 pub fn generate_totp(secret: &str) -> Result<u32, JsValue> {
-    let config = vault_core::totp::TotpConfig::from_secret_b32(secret, 30, 6)
+    let config = vault_sdk::totp::TotpConfig::from_secret_b32(secret, 30, 6)
         .map_err(into_js_err)?;
-    vault_core::totp::generate(&config).map_err(into_js_err)
+    vault_sdk::totp::generate(&config).map_err(into_js_err)
 }
 
 /// Validate a TOTP code. Returns true if valid (with ±1 step tolerance).
 #[wasm_bindgen]
 pub fn validate_totp(secret: &str, code: u32) -> Result<bool, JsValue> {
-    let config = vault_core::totp::TotpConfig::from_secret_b32(secret, 30, 6)
+    let config = vault_sdk::totp::TotpConfig::from_secret_b32(secret, 30, 6)
         .map_err(into_js_err)?;
-    vault_core::totp::validate(&config, code).map_err(into_js_err)
+    vault_sdk::totp::validate(&config, code).map_err(into_js_err)
 }
 
 // ─── Utility ───────────────────────────────────────────────────────────────

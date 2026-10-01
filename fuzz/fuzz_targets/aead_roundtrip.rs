@@ -80,7 +80,7 @@ fn fuzz_aead_roundtrip(data: &[u8]) {
         }
 
         // 2. Tamper with the ciphertext — must never decrypt successfully.
-        if ct.data.len() >= 1 {
+        if !ct.data.is_empty() {
             let mut tampered = ct.clone();
             tampered.data[0] ^= 0x01;
             match decrypt_record(&key, &tampered) {

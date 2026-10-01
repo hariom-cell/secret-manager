@@ -110,7 +110,7 @@ impl MacKeyStore {
 impl KeyStore for MacKeyStore {
     fn store(&self, name: &str, data: &[u8]) -> Result<()> {
         let path = self.path_for(name);
-        std::fs::create_dir_all(&path.parent().unwrap())?;
+        std::fs::create_dir_all(path.parent().unwrap())?;
         std::fs::write(&path, data)?;
         Ok(())
     }
@@ -213,7 +213,7 @@ impl MacSessionPersistence {
 impl SessionPersistence for MacSessionPersistence {
     fn save_token(&self, service: &str, account: &str, token: &SessionToken) -> Result<()> {
         let path = self.path_for(service, account);
-        std::fs::create_dir_all(&path.parent().unwrap())?;
+        std::fs::create_dir_all(path.parent().unwrap())?;
         let now_secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
         let ttl = token.time_remaining().map(|d| d.as_secs()).unwrap_or(0);
         let stored = format!("{}\n{}\n{}",
@@ -268,8 +268,8 @@ impl MacPlatform {
     pub fn new() -> Self {
         Self {
             key_store: MacKeyStore::default(),
-            secure_input: MacSecureInput::default(),
-            clipboard: MacClipboard::default(),
+            secure_input: MacSecureInput,
+            clipboard: MacClipboard,
             session_persistence: MacSessionPersistence::default(),
         }
     }

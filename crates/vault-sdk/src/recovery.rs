@@ -76,7 +76,7 @@ impl RecoveryPhrase {
     }
 
     /// The words of this phrase, joined by spaces.
-    pub fn to_string(&self) -> String {
+    pub fn phrase(&self) -> String {
         self.words.join(" ")
     }
 
@@ -88,7 +88,7 @@ impl RecoveryPhrase {
 
 impl std::fmt::Display for RecoveryPhrase {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self.phrase())
     }
 }
 

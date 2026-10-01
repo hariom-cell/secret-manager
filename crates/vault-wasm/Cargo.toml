@@ -19,6 +19,9 @@ serde_json = "1"
 getrandom = { version = "0.2", features = ["js"] }
 zeroize = { version = "1.8", features = ["derive"] }
 hex = "0.4"
+rand = "0.8"
+hmac = "0.12"
+sha2 = "0.10"
 
 [features]
 default = ["console_error_panic_hook"]

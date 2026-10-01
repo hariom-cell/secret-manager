@@ -180,7 +180,7 @@ proptest! {
         let dek1 = derive_dek(&vek, &rid).expect("dek 1");
         let dek2 = derive_dek(&vek, &rid).expect("dek 2");
 
-        prop_assert_eq!(dek1.as_bytes(), dek2.as_bytes());
+        prop_assert_eq!(dek1.as_key_bytes().as_bytes(), dek2.as_key_bytes().as_bytes());
     }
 
     #[test]
@@ -198,7 +198,7 @@ proptest! {
         let dek1 = derive_dek(&vek, &r1).expect("dek 1");
         let dek2 = derive_dek(&vek, &r2).expect("dek 2");
 
-        prop_assert_ne!(dek1.as_bytes(), dek2.as_bytes());
+        prop_assert_ne!(dek1.as_key_bytes().as_bytes(), dek2.as_key_bytes().as_bytes());
     }
 }
 
@@ -232,7 +232,7 @@ proptest! {
         for ((orig_id, orig_ct), (rec_id, rec_ct)) in records.iter().zip(recovered.iter()) {
             prop_assert_eq!(orig_id, rec_id);
             prop_assert_eq!(orig_ct.nonce.as_bytes(), rec_ct.nonce.as_bytes());
-            prop_assert_eq!(orig_ct.data, rec_ct.data);
+            prop_assert_eq!(&orig_ct.data, &rec_ct.data);
         }
     }
 
@@ -248,8 +248,8 @@ proptest! {
 
         let plaintext: Vec<u8> = (0..pt_len).map(|i| (i % 251) as u8).collect();
 
-        let ct = encrypt_record(&dek, &plaintext).expect("encrypt");
-        let recovered = decrypt_record(&dek, &ct).expect("decrypt");
+        let ct = encrypt_record(dek.as_key_bytes(), &plaintext).expect("encrypt");
+        let recovered = decrypt_record(dek.as_key_bytes(), &ct).expect("decrypt");
 
         prop_assert_eq!(recovered, plaintext);
     }

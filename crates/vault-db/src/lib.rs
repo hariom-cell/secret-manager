@@ -121,7 +121,7 @@ impl VaultFile {
         let vault = self.vault()?;
         vault
             .get_secret(&id)
-            .map_err(|e| DbError::Vault(e).into())
+            .map_err(DbError::Vault)
     }
 
     /// Remove a secret record and persist to disk.
@@ -154,18 +154,18 @@ impl VaultFile {
     pub fn vault(&self) -> DbResult<&Vault> {
         self.vault
             .as_ref()
-            .ok_or(DbError::VaultLocked.into())
+            .ok_or(DbError::VaultLocked)
     }
 
     /// Returns a mutable reference to the unlocked vault.
     pub fn vault_mut(&mut self) -> DbResult<&mut Vault> {
         self.vault
             .as_mut()
-            .ok_or(DbError::VaultLocked.into())
+            .ok_or(DbError::VaultLocked)
     }
 
     /// Consume the store and return the inner vault.
     pub fn into_vault(self) -> DbResult<Vault> {
-        self.vault.ok_or(DbError::VaultLocked.into())
+        self.vault.ok_or(DbError::VaultLocked)
     }
 }

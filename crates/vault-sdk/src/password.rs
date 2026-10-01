@@ -140,8 +140,8 @@ pub fn generate(policy: &PasswordPolicy) -> Result<String> {
     chars.shuffle(&mut rng);
 
     // SAFETY: every char in our alphabets is a single-byte ASCII char.
-    Ok(String::from_utf8(chars)
-        .map_err(|e| Error::Password(format!("utf8 conversion failed: {e}")))?)
+    String::from_utf8(chars)
+        .map_err(|e| Error::Password(format!("utf8 conversion failed: {e}")))
 }
 
 /// Bits of entropy for a password (helper).

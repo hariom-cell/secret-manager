@@ -89,7 +89,7 @@ impl WindowsKeyStore { pub fn new() -> Self { Self::default() } }
 impl KeyStore for WindowsKeyStore {
     fn store(&self, name: &str, data: &[u8]) -> Result<()> {
         let path = self.base_dir.join(name);
-        std::fs::create_dir_all(&path.parent().unwrap())?;
+        std::fs::create_dir_all(path.parent().unwrap())?;
         std::fs::write(&path, data)?;
         Ok(())
     }
@@ -164,7 +164,7 @@ impl WindowsSessionPersistence { pub fn new() -> Self { Self::default() } }
 impl SessionPersistence for WindowsSessionPersistence {
     fn save_token(&self, service: &str, account: &str, token: &SessionToken) -> Result<()> {
         let path = self.session_dir.join(format!("{}_{}", service, account));
-        std::fs::create_dir_all(&path.parent().unwrap())?;
+        std::fs::create_dir_all(path.parent().unwrap())?;
         let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
         let stored = format!("{}\n{}\n{}",
             hex_encode(token.token_id()),
@@ -208,8 +208,8 @@ impl WindowsPlatform {
     pub fn new() -> Self {
         Self {
             key_store: WindowsKeyStore::default(),
-            secure_input: WindowsSecureInput::default(),
-            clipboard: WindowsClipboard::default(),
+            secure_input: WindowsSecureInput,
+            clipboard: WindowsClipboard,
             session_persistence: WindowsSessionPersistence::default(),
         }
     }

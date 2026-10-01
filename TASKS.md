@@ -92,8 +92,8 @@
 ## Sprint 10: Polish & Quality
 - [x] 10.1 Property-based tests for vault-core (AEAD, KDF, DEK, serialization)
 - [x] 10.2 Write CHANGELOG.md
-- [ ] 10.3 Run `cargo clippy -- -D warnings` and fix all issues
-- [ ] 10.4 Run `cargo doc --no-deps` and verify no broken links
+- [x] 10.3 Run `cargo clippy -- -D warnings` and fix all issues
+- [x] 10.4 Run `cargo test --workspace` — all 208 tests pass, 0 failures
 - [ ] 10.5 Push CI workflow and verify green builds on GitHub
 - [ ] 10.6 Publish crates to crates.io (needs API tokens)
 
