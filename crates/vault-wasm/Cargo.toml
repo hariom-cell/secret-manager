@@ -10,8 +10,8 @@ rust-version = "1.75"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-vault-core = { path = "../vault-core", default-features = false }
-vault-sdk = { path = "../vault-sdk" }
+vault-core = { path = "../vault-core", version = "0.1.0", default-features = false }
+vault-sdk = { path = "../vault-sdk", version = "0.1.0" }
 wasm-bindgen = "0.2"
 js-sys = "0.3"
 serde = { version = "1", features = ["derive"] }

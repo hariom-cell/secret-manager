@@ -62,8 +62,8 @@
 - [x] 5.7  Add fuzzing harness for AEAD encrypt/decrypt
 - [x] 5.8  Implement vault file integrity verification (HMAC)
 - [x] 5.9  Add build reproducibility checks
-- [ ] 5.1  Run `cargo audit` and fix all advisories — blocked (sandbox)
-- [ ] 5.2  Run `cargo deny` and configure deny.toml — blocked (sandbox)
+- [x] 5.1  Run `cargo audit` and fix all advisories
+- [x] 5.2  Run `cargo deny` and configure deny.toml
 
 ## Sprint 6: CI/CD & Distribution
 - [x] 6.1  Create GitHub Actions CI workflow (test on Linux/macOS/Windows)
@@ -89,9 +89,18 @@
 - [x] 8.4  Implement auto-type / autofill
 - [x] 8.5  Package as .dmg, .deb, .msi, .AppImage
 
-## Sprint 9: Browser & Mobile (WASM + Web App)
-- [x] 9.1  Create vault-wasm crate with WASM bindings
-- [x] 9.2  Build web frontend (HTML/JS) with vault operations
-- [x] 9.3  Browser extension manifest + packaging
-- [x] 9.4  PWA manifest + service worker for mobile install
-- [x] 9.5  Build and verify WASM compilation (needs wasm-pack + network — code written, blocked by sandbox)
+## Sprint 10: Polish & Quality
+- [x] 10.1 Property-based tests for vault-core (AEAD, KDF, DEK, serialization)
+- [x] 10.2 Write CHANGELOG.md
+- [ ] 10.3 Run `cargo clippy -- -D warnings` and fix all issues
+- [ ] 10.4 Run `cargo doc --no-deps` and verify no broken links
+- [ ] 10.5 Push CI workflow and verify green builds on GitHub
+- [ ] 10.6 Publish crates to crates.io (needs API tokens)
+
+## Sprint 11: Production Readiness
+- [ ] 11.1 Run full fuzz campaign (100k+ iterations each harness)
+- [ ] 11.2 Valgrind / miri memory-safety check
+- [ ] 11.3 Formal threat model document
+- [ ] 11.4 Recovery flow with seed phrase
+- [ ] 11.5 Homebrew tap setup
+- [ ] 11.6 Docker image with reproducible build

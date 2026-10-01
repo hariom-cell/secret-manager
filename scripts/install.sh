@@ -2,8 +2,8 @@
 # Secret Manager — One-Click Install
 #
 # Usage:
-#   curl -fsSL https://install.secret-manager.dev | bash
-#   curl -fsSL https://install.secret-manager.dev | bash -s -- v0.2.0
+#   curl -fsSL https://raw.githubusercontent.com/hariom-cell/secret-manager/main/scripts/install.sh | bash
+#   curl -fsSL ... | bash -s -- v0.2.0
 #
 # Detects OS/arch and installs the right binary.
 
@@ -19,11 +19,13 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-info() { echo -e "${GREEN}[✓]${NC} $*"; }
+info() { echo -e "${GREEN}[OK]${NC} $*"; }
 warn() { echo -e "${YELLOW}[!]${NC} $*"; }
-error() { echo -e "${RED}[✗]${NC} $*"; exit 1; }
+error() { echo -e "${RED}[X]${NC} $*"; exit 1; }
 
-# ─── Detect Platform ───────────────────────────────────────────────────
+REPO="hariom-cell/secret-manager"
+
+# ─── Detect Platform ──────────────────────────────────────────────
 
 detect_platform() {
   local os arch
@@ -33,32 +35,71 @@ detect_platform() {
   case "$os" in
     Darwin)
       case "$arch" in
-        arm64)  PLATFORM="aarch64-apple-darwin" ;;
-        x86_64) PLATFORM="x86_64-apple-darwin" ;;
+        arm64)  PLATFORM="mac-arm"; ASSET="vault-cli-mac-arm.tar.gz"; BIN_NAME="secret-manager-arm" ;;
+        x86_64) PLATFORM="mac-intel"; ASSET="vault-cli-mac-intel.tar.gz"; BIN_NAME="secret-manager-intel" ;;
         *) error "Unsupported Mac architecture: $arch" ;;
       esac
-      BIN_NAME="secret-manager-macos"
       ;;
     Linux)
       case "$arch" in
-        x86_64) PLATFORM="x86_64-unknown-linux-musl" ;;
-        aarch64|arm64) PLATFORM="aarch64-unknown-linux-musl" ;;
+        x86_64)
+          warn "Linux binary not yet published. Building from source..."
+          build_from_source
+          exit 0
+          ;;
+        aarch64|arm64)
+          warn "Linux ARM binary not yet published. Building from source..."
+          build_from_source
+          exit 0
+          ;;
         *) error "Unsupported Linux architecture: $arch" ;;
       esac
-      BIN_NAME="secret-manager-linux"
       ;;
     MINGW*|MSYS*|CYGWIN*)
-      error "Windows: use the .msi installer from GitHub Releases or scoop: scoop install secret-manager"
+      error "Windows: download the .exe from GitHub Releases or: scoop install secret-manager"
       ;;
     *)
       error "Unsupported OS: $os"
       ;;
   esac
 
-  info "Detected: $os $arch → $PLATFORM"
+  info "Detected: $os $arch -> $PLATFORM"
 }
 
-# ─── Check Prerequisites ──────────────────────────────────────────────
+# ─── Build from source (fallback) ────────────────────────────────
+
+build_from_source() {
+  if ! command -v cargo &>/dev/null; then
+    error "Need Rust to build from source. Install: https://rustup.rs/"
+  fi
+
+  local tmpdir
+  tmpdir=$(mktemp -d)
+  info "Cloning repository..."
+  git clone "https://github.com/${REPO}.git" "$tmpdir/secret-manager" --depth 1
+
+  cd "$tmpdir/secret-manager"
+  cargo build --release --bin vault-cli
+
+  local extracted="$tmpdir/secret-manager/target/release/vault-cli"
+  local dest="$INSTALL_DIR/secret-manager"
+
+  if [ -w "$INSTALL_DIR" ]; then
+    cp "$extracted" "$dest"
+  else
+    info "Need sudo to write to $INSTALL_DIR"
+    sudo cp "$extracted" "$dest"
+  fi
+  chmod +x "$dest"
+
+  mkdir -p "$CONFIG_DIR"
+  chmod 700 "$CONFIG_DIR"
+
+  info "Built and installed to $dest"
+  rm -rf "$tmpdir"
+}
+
+# ─── Check Prerequisites ────────────────────────────────────────
 
 check_deps() {
   if ! command -v curl &>/dev/null && ! command -v wget &>/dev/null; then
@@ -70,50 +111,45 @@ check_deps() {
   info "Dependencies OK"
 }
 
-# ─── Download ──────────────────────────────────────────────────────────
+# ─── Download ────────────────────────────────────────────────────
 
 download() {
   local version="$1"
-  local platform="$2"
   local url
 
   if [ "$version" = "latest" ]; then
-    url="https://github.com/hariomsehgal/secret-manager/releases/latest/download/secret-manager-${platform}.tar.gz"
+    url="https://github.com/${REPO}/releases/latest/download/${ASSET}"
   else
-    url="https://github.com/hariomsehgal/secret-manager/releases/download/${version}/secret-manager-${platform}.tar.gz"
+    url="https://github.com/${REPO}/releases/download/${version}/${ASSET}"
   fi
 
-  info "Downloading $version for $platform..."
+  info "Downloading $ASSET..."
 
   if command -v curl &>/dev/null; then
-    curl -fsSL "$url" -o "/tmp/secret-manager.tar.gz" || error "Download failed. Check the URL or network."
+    curl -fsSL "$url" -o "/tmp/$ASSET" || error "Download failed from: $url"
   else
-    wget -q "$url" -O "/tmp/secret-manager.tar.gz" || error "Download failed."
+    wget -q "$url" -O "/tmp/$ASSET" || error "Download failed."
   fi
 
-  info "Downloaded $(du -h /tmp/secret-manager.tar.gz | cut -f1)"
+  info "Downloaded $(du -h "/tmp/$ASSET" | cut -f1)"
 }
 
-# ─── Install ───────────────────────────────────────────────────────────
+# ─── Install ─────────────────────────────────────────────────────
 
 install_binary() {
-  local binary_name="secret-manager"
-  local dest="$INSTALL_DIR/$binary_name"
+  local dest="$INSTALL_DIR/secret-manager"
 
   # Extract
-  tar -xzf /tmp/secret-manager.tar.gz -C /tmp/
+  tar -xzf "/tmp/$ASSET" -C /tmp/
 
-  # Find the binary in the extracted files
-  local extracted
-  extracted=$(find /tmp -name "$binary_name" -type f | head -1)
-
-  if [ -z "$extracted" ]; then
-    error "Binary not found in archive. Archive contents:"
-    tar -tzf /tmp/secret-manager.tar.gz
+  local extracted="/tmp/$BIN_NAME"
+  if [ ! -f "$extracted" ]; then
+    error "Binary '$BIN_NAME' not found in archive. Contents:"
+    tar -tzf "/tmp/$ASSET"
     exit 1
   fi
 
-  # Check if we need sudo
+  # Install (with sudo if needed)
   if [ -w "$INSTALL_DIR" ]; then
     cp "$extracted" "$dest"
   else
@@ -125,17 +161,17 @@ install_binary() {
   info "Installed to $dest"
 
   # Verify
-  if "$dest" --version &>/dev/null || "$dest" --help &>/dev/null; then
+  if "$dest" --help &>/dev/null; then
     info "Installation verified"
   else
     warn "Could not verify binary (try running: $dest --help)"
   fi
 
   # Cleanup
-  rm -rf /tmp/secret-manager.tar.gz /tmp/$binary_name 2>/dev/null || true
+  rm -f "/tmp/$ASSET" "/tmp/$BIN_NAME"
 }
 
-# ─── Setup Config ──────────────────────────────────────────────────────
+# ─── Setup Config ────────────────────────────────────────────────
 
 setup_config() {
   mkdir -p "$CONFIG_DIR"
@@ -143,18 +179,18 @@ setup_config() {
   info "Config directory ready: $CONFIG_DIR"
 }
 
-# ─── Main ──────────────────────────────────────────────────────────────
+# ─── Main ─────────────────────────────────────────────────────────
 
 main() {
   echo ""
-  echo "╔══════════════════════════════════════════╗"
-  echo "║     🔐 Secret Manager Installer         ║"
-  echo "╚══════════════════════════════════════════╝"
+  echo "============================================"
+  echo "  Secret Manager Installer"
+  echo "============================================"
   echo ""
 
   detect_platform
   check_deps
-  download "$VERSION" "$PLATFORM"
+  download "$VERSION"
   install_binary
   setup_config
 
@@ -163,15 +199,15 @@ main() {
   echo ""
   echo "  Next steps:"
   echo "    secret-manager create    # Create a new vault"
-  echo "    secret-manager unlock    # Unlock your vault"
   echo "    secret-manager list      # List your secrets"
+  echo "    secret-manager gen-pass  # Generate a password"
   echo ""
   echo "  Vault stored at: $CONFIG_DIR/vault.enc"
   echo ""
 
   if ! command -v secret-manager &>/dev/null; then
-    warn "The binary was installed to $INSTALL_DIR but it's not in your PATH."
-    echo "  Add this to your shell config:"
+    warn "Installed to $INSTALL_DIR but it's not in your PATH."
+    echo "  Add to your shell config:"
     echo "    export PATH=\"$INSTALL_DIR:\$PATH\""
   fi
 }

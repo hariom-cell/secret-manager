@@ -7,7 +7,7 @@ description = "File-backed encrypted vault storage layer"
 rust-version = "1.75"
 
 [dependencies]
-vault-core = { path = "../vault-core" }
+vault-core = { path = "../vault-core", version = "0.1.0" }
 thiserror = "2.0"
 zeroize = { version = "1.8", features = ["derive"] }
 
