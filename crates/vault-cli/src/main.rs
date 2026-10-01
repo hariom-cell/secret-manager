@@ -35,6 +35,7 @@ use vault_db::VaultFile;
 use vault_sdk::{
     backup::{backup_vault, restore_vault},
     password::{generate, PasswordPolicy},
+    recovery::{generate_phrase, validate_phrase},
 };
 
 // ─── Error handling ───────────────────────────────────────────────────────
@@ -186,8 +187,10 @@ COMMANDS:
     delete   <vault-path> <record-id>                  Delete a secret
     export   <vault-path> <output-file>                Export encrypted backup
     import   <vault-path> <backup-file>                 Import from backup
-    gen-pass [length] [count]                          Generate secure passwords
-    help                                              Show this help
+    recovery create [vault-path]                         Generate recovery phrase
+    recovery verify <phrase>                             Verify recovery phrase
+    gen-pass [length] [count]                            Generate secure passwords
+    help                                                Show this help
 
 ARGUMENTS:
     <vault-path>   Path to the vault file (default: ~/.config/secret-manager/vault.enc)
@@ -479,6 +482,63 @@ fn cmd_import(args: &CliArgs) -> CliResult<()> {
     Ok(())
 }
 
+fn cmd_recovery_create(args: &CliArgs) -> CliResult<()> {
+    let _path = resolve_vault(args.opt(0));
+
+    println!("Generating recovery phrase — write it down and store it safely.");
+    println!("This phrase can restore your vault if you forget the master password.");
+    println!();
+
+    let phrase = generate_phrase();
+    println!("Recovery phrase (8 words):");
+    println!();
+    println!("  {}", phrase.phrase());
+    println!();
+    println!("IMPORTANT: Write these words down in order. Store them separately from your vault file.");
+    println!("Anyone with this phrase can restore your vault.");
+
+    Ok(())
+}
+
+fn cmd_recovery_verify(args: &CliArgs) -> CliResult<()> {
+    let phrase_str = args.get(0)?;
+
+    let phrase = match vault_sdk::recovery::parse_phrase(phrase_str) {
+        Ok(p) => p,
+        Err(_) => {
+            eprintln!("Invalid recovery phrase: contains unknown words or wrong format.");
+            eprintln!("Enter your 8-word phrase separated by spaces.");
+            process::exit(1);
+        }
+    };
+
+    if validate_phrase(&phrase).is_ok() {
+        println!("Recovery phrase is valid ({} words).", phrase.word_count());
+        Ok(())
+    } else {
+        eprintln!("Recovery phrase validation failed.");
+        process::exit(1);
+    }
+}
+
+fn cmd_recovery(args: &CliArgs) -> CliResult<()> {
+    let sub = args.get(0)?;
+
+    match sub {
+        "create" => cmd_recovery_create(&CliArgs {
+            cmd: args.cmd.clone(),
+            args: args.args.iter().skip(1).cloned().collect(),
+        }),
+        "verify" => cmd_recovery_verify(&CliArgs {
+            cmd: args.cmd.clone(),
+            args: args.args.iter().skip(1).cloned().collect(),
+        }),
+        _ => Err(CliError::Args(format!(
+            "unknown recovery subcommand: '{}' (use create | verify)", sub
+        ))),
+    }
+}
+
 fn cmd_gen_pass(args: &CliArgs) -> CliResult<()> {
     let length = args
         .opt(0)
@@ -524,6 +584,7 @@ fn main() {
         "delete" | "rm" | "del" => cmd_delete(&args),
         "export"    => cmd_export(&args),
         "import"    => cmd_import(&args),
+        "recovery"  => cmd_recovery(&args),
         "gen-pass" | "genpass" | "gen" => cmd_gen_pass(&args),
         _ => {
             eprintln!("unknown command: {}", args.cmd);

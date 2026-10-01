@@ -23,6 +23,7 @@ use wasm_bindgen::prelude::*;
 
 // Re-export types from vault-sdk
 pub use vault_sdk::password::{self, CharClass, PasswordPolicy, Strength};
+pub use vault_sdk::recovery::{self, RecoveryPhrase};
 pub use vault_sdk::totp::{self, TotpConfig};
 
 // ─── In-Memory Vault State ─────────────────────────────────────────────────
@@ -418,6 +419,37 @@ pub fn bytes_to_hex(bytes: &[u8]) -> String {
 #[wasm_bindgen]
 pub fn hex_to_bytes(hex: &str) -> Result<Vec<u8>, JsValue> {
     hex::decode(hex).map_err(into_js_err)
+}
+
+// ─── Recovery Phrase ─────────────────────────────────────────────────────
+
+/// Generate a random 8-word recovery phrase (BIP-39 vocabulary).
+///
+/// Returns a space-separated string of 8 words derived from OS CSPRNG entropy.
+/// The user must write these down — they are the only way to recover the vault
+/// without the master password.
+#[wasm_bindgen]
+pub fn recovery_generate() -> Result<String, JsValue> {
+    let phrase = recovery::generate_phrase();
+    Ok(phrase.phrase())
+}
+
+/// Verify that a recovery phrase string is well-formed (all words valid, 8 words).
+#[wasm_bindgen]
+pub fn recovery_verify(phrase_str: &str) -> Result<bool, JsValue> {
+    let phrase = recovery::parse_phrase(phrase_str).map_err(into_js_err)?;
+    Ok(recovery::validate_phrase(&phrase).is_ok())
+}
+
+/// Convert a recovery phrase back to entropy bytes (32 bytes as hex).
+///
+/// This is used during vault recovery: the user enters their phrase, and the
+/// entropy is used to re-derive the vault's master key material.
+#[wasm_bindgen]
+pub fn recovery_to_entropy(phrase_str: &str) -> Result<String, JsValue> {
+    let phrase = recovery::parse_phrase(phrase_str).map_err(into_js_err)?;
+    let entropy = recovery::phrase_to_entropy(&phrase).map_err(into_js_err)?;
+    Ok(hex::encode(entropy))
 }
 
 // ─── Init ──────────────────────────────────────────────────────────────────

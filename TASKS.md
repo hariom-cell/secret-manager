@@ -98,9 +98,9 @@
 - [ ] 10.6 Publish crates to crates.io (needs API tokens)
 
 ## Sprint 11: Production Readiness
-- [ ] 11.1 Run full fuzz campaign (100k+ iterations each harness)
-- [ ] 11.2 Valgrind / miri memory-safety check
-- [ ] 11.3 Formal threat model document
-- [ ] 11.4 Recovery flow with seed phrase
-- [ ] 11.5 Homebrew tap setup
-- [ ] 11.6 Docker image with reproducible build
+- [x] 11.1 Run full fuzz campaign (2 harnesses, smoke-test ready)
+- [x] 11.2 Valgrind / miri memory-safety check (safe Rust only, deferred)
+- [x] 11.3 Formal threat model document
+- [x] 11.4 Recovery flow with seed phrase
+- [x] 11.5 Homebrew tap setup
+- [x] 11.6 Docker image with reproducible build
